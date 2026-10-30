@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morgann Music CP - Application</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ==========================================================================
+           GLOBAL VARIABLES & RESET
+           ========================================================================== */
+        :root {
+            --primary: #FC8FB0;
+            --primary-hover: #f96490;
+            --primary-light: #ffe4ec;
+            --dark: #222222;
+            --bg-color: #f7f7f7;
+            --card-bg: rgba(255, 255, 255, 0.855);
+            --border-glass: rgba(189, 189, 189, 0.438);
+            --text-main: #333333;
+            --text-muted: #666666;
+            --text-label: #888888;
+            --input-bg: #ffffff;
+            --input-border: #ccc;
+            --input-text: #222222;
+            --warning: #fd7e14;
+            --danger: #dc3545;
+            --success: #28a745;
+            --sidebar-width: 260px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #FC8FB0;
+                --primary-hover: #ff7da4;
+                --dark: #ffffff;
+                --bg-color: #2c000d;
+                --card-bg: rgba(20, 0, 6, 0.75);
+                --border-glass: rgba(252, 143, 176, 0.25);
+                --text-main: #ffffff;
+                --text-muted: #ffccd9;
+                --text-label: #caa0ad;
+                --input-bg: rgba(0, 0, 0, 0.4);
+                --input-border: rgba(252, 143, 176, 0.3);
+                --input-text: #ffffff;
+            }
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #global-sidebar {
+            width: var(--sidebar-width);
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-glass);
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        #global-sidebar.hidden {
+            display: none;
+        }
+
+        .sidebar-logo {
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: var(--primary-light);
+            color: var(--dark);
+            border-left-color: var(--primary);
+        }
+
+        @media (prefers-color-scheme: dark) {
+
+            .sidebar-link:hover,
+            .sidebar-link.active {
+                background: rgba(252, 143, 176, 0.2);
+                color: #fff;
+            }
+        }
+
+        #global-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #global-navbar {
+            height: 65px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-glass);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 50;
+        }
+
+        #view-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .app-view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .app-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Animation de chargement / Skeleton en dégradé */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .shimmer-card {
+            background: linear-gradient(90deg, var(--card-bg) 25%, var(--primary-light) 50%, var(--card-bg) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 24px;
+            height: 180px;
+            margin-bottom: 20px;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            margin-top: 0;
+            color: var(--text-main);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            backdrop-filter: blur(20px);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-label);
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            padding: 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--input-text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 143, 176, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-glass);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 34px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .item-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .item-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            z-index: 10000;
+            transition: 0.3s;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Barre de titre personnalisée façon macOS */
+        #custom-titlebar {
+            height: 35px;
+            background: var(--card-bg);
+            display: flex;
+            align-items: center;
+            padding-left: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 99999;
+            -webkit-app-region: drag;
+            /* Permet de déplacer la fenêtre en cliquant sur la barre */
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+            /* Empêche le drag sur les boutons pour pouvoir cliquer */
+        }
+
+        .win-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .win-close {
+            background-color: #ff5f56;
+        }
+
+        .win-minimize {
+            background-color: #ffbd2e;
+        }
+
+        .win-maximize {
+            background-color: #27c93f;
+        }
+
+        /* Ajustement du contenu principal pour qu'il ne passe pas sous la barre */
+        body {
+            padding-top: 35px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Barre de titre personnalisée macOS -->
+    <div id="custom-titlebar">
+        <div class="window-controls">
+            <button class="win-btn win-close" onclick="window.electronAPI.close()" title="Fermer"></button>
+            <button class="win-btn win-minimize" onclick="window.electronAPI.minimize()" title="Réduire"></button>
+            <button class="win-btn win-maximize" onclick="window.electronAPI.maximize()" title="Plein écran"></button>
+        </div>
+    </div>
+
+    <div id="app-layout">
+
+        <!-- SIDEBAR -->
+        <aside id="global-sidebar" class="hidden">
+            <div class="sidebar-logo">Morgann Music CP</div>
+            <nav class="sidebar-nav">
+                <a class="sidebar-link active" onclick="navigate('index')">Tableau de bord</a>
+                <a class="sidebar-link" onclick="navigate('artistes')">Mes Artistes</a>
+                <a class="sidebar-link" onclick="navigate('sorties')">Mes Sorties</a>
+            </nav>
+        </aside>
+
+        <!-- MAIN AREA -->
+        <main id="global-main">
+
+            <header id="global-navbar">
+                <div>
+                    <h3 id="top-bar-title" style="margin:0; font-size:18px;">Morgann Music CP</h3>
+                </div>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <span style="font-size: 13px; color: var(--text-muted);">Version complète sur web : <a
+                            href="https://mm-cp.uk/portail/" target="_blank"
+                            onclick="ouvrirLienExterne(event, 'https://mm-cp.uk/portail/')"
+                            style="color: var(--primary); font-weight: bold;">mm-cp.uk/portail</a></span>
+                    <button id="btn-nav-logout" class="btn btn-danger" style="display:none;"
+                        onclick="seDeconnecter()">Déconnexion</button>
+                </div>
+            </header>
+
+            <div id="view-container">
+
+                <!-- 0. CHARGEMENT / SKELETON (Par défaut au démarrage) -->
+                <section id="view-loading" class="app-view active">
+                    <div style="max-width: 600px; margin: 40px auto; text-align: center;">
+                        <h2 style="margin-bottom: 25px; color: var(--primary);">Chargement de votre session...</h2>
+                        <div class="shimmer-card"></div>
+                        <div class="shimmer-card"></div>
+                    </div>
+                </section>
+
+                <!-- 1. LOGIN -->
+                <section id="view-login" class="app-view">
+                    <div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
+                        <h2 style="margin-bottom: 10px;">Connexion</h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Connectez-vous à
+                            votre portail Morgann Music CP.</p>
+                        <div
+                            style="margin-bottom: 20px; font-size: 12px; background: var(--primary-light); padding: 10px; border-radius: 10px; color: var(--text-main);">
+                            💡 Retrouvez l'intégralité des fonctionnalités sur notre version web officielle : <br>
+                            <a href="https://mm-cp.uk/portail/" target="_blank"
+                                onclick="ouvrirLienExterne(event, 'https://mm-cp.uk/portail/')"
+                                style="color: var(--primary); font-weight: bold; text-decoration: underline;">https://mm-cp.uk/portail/</a>
+                        </div>
+                        <div id="login-error"
+                            style="display:none; color: white; background: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="text-align: left;">
+                            <label>E-mail</label>
+                            <input type="email" id="login-email" class="form-control" placeholder="vous@email.com">
+                        </div>
+                        <div class="form-group" style="text-align: left;">
+                            <label>Mot de passe</label>
+                            <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+                        </div>
+                        <button id="btn-login-submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;"
+                            onclick="seConnecter()">Se connecter</button>
+                    </div>
+                </section>
+
+                <!-- 2. INDEX (Dashboard) -->
+                <section id="view-index" class="app-view">
+                    <div style="margin-bottom: 25px;">
+                        <h1>Bonjour <span id="user-firstname">Artiste</span></h1>
+                    </div>
+                    <div class="card">
+                        <h3>Mes Artistes Récents</h3>
+                        <div id="dash-artists-list" class="grid-cards">Chargement...</div>
+                    </div>
+                    <div class="card">
+                        <h3>Dernières Sorties</h3>
+                        <div id="dash-releases-list" class="grid-cards">Chargement...</div>
+                    </div>
+                </section>
+
+                <!-- 3. ARTISTES -->
+                <section id="view-artistes" class="app-view">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <h2>Mes Artistes</h2>
+                        <button class="btn btn-primary" onclick="openModal('modal-add-artist')">+ Ajouter un
+                            artiste</button>
+                    </div>
+                    <div id="artist-list" class="grid-cards"></div>
+                </section>
+
+                <!-- 4. PROFIL -->
+                <section id="view-profil" class="app-view">
+                    <button class="btn btn-secondary" style="margin-bottom: 15px;" onclick="navigate('artistes')">←
+                        Retour</button>
+                    <div class="card" style="padding: 0; overflow: hidden; position: relative;">
+                        <div style="height: 150px; background: #ccc;">
+                            <img id="profil-banner" style="width: 100%; height: 100%; object-fit: cover;" src="">
+                        </div>
+                        <div style="padding: 20px; display: flex; gap: 20px; align-items: flex-end; margin-top: -60px;">
+                            <img id="profil-avatar"
+                                style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid var(--card-bg); background:#eee; object-fit:cover;"
+                                src="">
+                            <div style="flex:1;">
+                                <h1 id="profil-name" style="margin:0;">Nom Artiste</h1>
+                                <p id="profil-genre" style="margin:5px 0 0 0; color:var(--text-muted);">Genre</p>
+                            </div>
+                            <button class="btn btn-primary"
+                                onclick="navigate('artiste', {id: currentArtistId})">Paramètres Éditeur</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Informations de base</h3>
+                        <div id="profil-metadata" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. ARTISTE (Paramètres Éditeur) -->
+                <section id="view-artiste" class="app-view">
+                    <button class="btn btn-secondary" style="margin-bottom: 15px;"
+                        onclick="navigate('profil', {id: currentArtistId})">← Retour au profil</button>
+                    <h2>Paramètres Éditeur & Liens Artiste</h2>
+                    <div class="card">
+                        <div class="form-group"><label>Bio</label><textarea id="art-bio" class="form-control"
+                                rows="3"></textarea></div>
+                        <div class="form-group"><label>Lien Spotify</label><input type="text" class="form-control"
+                                id="art-spotify"></div>
+                        <div class="form-group"><label>Lien Apple Music</label><input type="text" class="form-control"
+                                id="art-apple"></div>
+                        <button class="btn btn-primary" onclick="sauvegarderArtisteEditeur()">Enregistrer</button>
+                    </div>
+                </section>
+
+                <!-- 6. SORTIES -->
+                <section id="view-sorties" class="app-view">
+                    <div style="margin-bottom: 20px;">
+                        <h2>Mes Sorties</h2>
+                    </div>
+                    <div id="releases-list" class="grid-cards"></div>
+                </section>
+
+                <!-- 7. SORTIE (Détails) -->
+                <section id="view-sortie" class="app-view">
+                    <button class="btn btn-secondary" style="margin-bottom: 15px;" onclick="navigate('sorties')">←
+                        Retour</button>
+                    <div class="card" style="display:flex; gap:30px; flex-wrap: wrap;">
+                        <img id="det-cover" style="width:250px; height:250px; border-radius:20px; object-fit:cover;"
+                            src="">
+                        <div style="flex:1; min-width: 250px;">
+                            <h1 id="det-title">Titre</h1>
+                            <p id="det-artist" style="color:var(--text-muted); font-size:18px;">Artiste</p>
+                            <span id="det-status" class="badge badge-warning">Statut</span>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 20px;">
+                                <div><strong style="font-size:12px; color:var(--text-label);">UPC</strong><br><span
+                                        id="det-upc">-</span></div>
+                                <div><strong style="font-size:12px; color:var(--text-label);">Date</strong><br><span
+                                        id="det-date">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Pistes</h3>
+                        <div id="det-tracklist"></div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL AJOUT ARTISTE -->
+    <div id="modal-add-artist" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-add-artist')">✕</button>
+            <h2>Créer un Artiste</h2>
+            <div class="form-group"><label>Nom de l'artiste</label><input type="text" id="add-artist-name"
+                    class="form-control"></div>
+            <button class="btn btn-primary" style="width:100%;" onclick="creerArtiste()">Créer</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Message</div>
+
+    <!-- SCRIPT LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
+            authDomain: "morgann-music-cp.firebaseapp.com",
+            projectId: "morgann-music-cp",
+            storageBucket: "morgann-music-cp.firebasestorage.app",
+            messagingSenderId: "666812685196",
+            appId: "1:666812685196:web:fe3df6749ae768d68494a9",
+            measurementId: "G-FKSSXYEZF0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const WORKER_URL = "https://api.worker.mm-cp.uk";
+
+        const api = {
+            async request(endpoint, method = 'GET', body = null) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (auth.currentUser) {
+                    headers['Authorization'] = `Bearer ${await auth.currentUser.getIdToken()}`;
+                }
+                const options = { method, headers };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(`${WORKER_URL}${endpoint}`, options);
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || 'Erreur API');
+                return json;
+            },
+            get: (ep) => api.request(ep),
+            post: (ep, data) => api.request(ep, 'POST', data),
+            patch: (ep, data) => api.request(ep, 'PATCH', data),
+
+            fileUrl(url) {
+                if (!url) return '';
+                const value = String(url).trim();
+                if (!value) return '';
+
+                if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
+                    return value;
+                }
+
+                if (value.startsWith('/api/files/')) {
+                    return `${WORKER_URL}${value}`;
+                }
+
+                if (value.startsWith('/')) {
+                    return `${WORKER_URL}${value}`;
+                }
+
+                return `${WORKER_URL}/api/files/${encodeURIComponent(value)}`;
+            }
+        };
+
+        const state = { currentUser: null, artists: [], releases: [] };
+        window.currentArtistId = null;
+        window.currentReleaseId = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            const sidebar = document.getElementById('global-sidebar');
+            const btnLogout = document.getElementById('btn-nav-logout');
+
+            if (user) {
+                state.currentUser = user;
+                sidebar.classList.remove('hidden');
+                btnLogout.style.display = 'block';
+                await fetchData();
+                navigate('index');
+            } else {
+                state.currentUser = null;
+                sidebar.classList.add('hidden');
+                btnLogout.style.display = 'none';
+                navigate('login');
+            }
+        });
+
+        window.seConnecter = async function () {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errBox = document.getElementById('login-error');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                errBox.innerText = error.message || "Identifiants incorrects.";
+                errBox.style.display = 'block';
+            }
+        };
+
+        window.seDeconnecter = () => signOut(auth);
+
+        async function fetchData() {
+            if (!state.currentUser) return;
+            const uid = state.currentUser.uid;
+            try {
+                const [artRes, relRes] = await Promise.all([
+                    api.get(`/api/users/${uid}/artists`).catch(() => []),
+                    api.get(`/api/users/${uid}/releases`).catch(() => [])
+                ]);
+                state.artists = Array.isArray(artRes) ? artRes : (artRes.artists || []);
+                state.releases = Array.isArray(relRes) ? relRes : [];
+            } catch (e) { console.error(e); }
+        }
+
+        window.navigate = function (viewId, params = {}) {
+            if (!state.currentUser && viewId !== 'login' && viewId !== 'loading') viewId = 'login';
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            const link = document.querySelector(`.sidebar-link[onclick*="('${viewId}')"]`);
+            if (link) link.classList.add('active');
+
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            const viewElement = document.getElementById(`view-${viewId}`);
+            if (viewElement) viewElement.classList.add('active');
+
+            if (viewId === 'loading') {
+                document.getElementById('top-bar-title').innerText = 'Morgann Music CP';
+            } else {
+                document.getElementById('top-bar-title').innerText = viewId === 'login' ? 'Connexion' : viewId.toUpperCase();
+            }
+
+            if (viewId === 'index') initIndex();
+            else if (viewId === 'artistes') initArtistes();
+            else if (viewId === 'profil') initProfil(params.id);
+            else if (viewId === 'artiste') initArtisteEdit(params.id);
+            else if (viewId === 'sorties') initSorties();
+            else if (viewId === 'sortie') initSortieDetail(params.id);
+        };
+
+        window.openModal = id => document.getElementById(id).classList.add('active');
+        window.closeModal = id => document.getElementById(id).classList.remove('active');
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        };
+
+        // Gestion de l'ouverture des liens externes dans le navigateur par défaut (Electron/Navigateur)
+        window.ouvrirLienExterne = function (event, url) {
+            event.preventDefault();
+            // Si l'application tourne dans Electron avec l'API shell disponible
+            if (window.require) {
+                try {
+                    const { shell } = window.require('electron');
+                    shell.openExternal(url);
+                    return;
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            // Fallback pour navigateur web classique
+            window.open(url, '_blank');
+        };
+
+        function initIndex() {
+            document.getElementById('user-firstname').innerText = state.currentUser.email.split('@')[0];
+            document.getElementById('dash-artists-list').innerHTML = state.artists.slice(0, 3).map(a => `
+                <div class="card item-card" onclick="navigate('profil', {id:'${a.id}'})" style="cursor:pointer; margin:0;">
+                    <img src="${api.fileUrl(a.photo || a.logoUrl) || '/assets/img/icons/pdp.png'}"><strong>${a.name}</strong>
+                </div>`).join('') || 'Aucun artiste';
+
+            document.getElementById('dash-releases-list').innerHTML = state.releases.slice(0, 3).map(r => `
+                <div class="card item-card" onclick="navigate('sortie', {id:'${r.id}'})" style="cursor:pointer; margin:0;">
+                    <img src="${api.fileUrl(r.coverUrl || r.cover || r.cover_url) || '/assets/img/icons/brouillon.png'}"><strong>${r.title}</strong>
+                </div>`).join('') || 'Aucune sortie';
+        }
+
+        function initArtistes() {
+            document.getElementById('artist-list').innerHTML = state.artists.map(a => `
+                <div class="card item-card" style="cursor:pointer; margin:0;" onclick="navigate('profil', {id:'${a.id}'})">
+                    <img src="${api.fileUrl(a.photo || a.logoUrl) || '/assets/img/icons/pdp.png'}">
+                    <h3>${a.name}</h3>
+                    <p style="color:var(--text-muted); font-size:12px;">${a.genre || 'Genre inconnu'}</p>
+                </div>`).join('') || '<p>Aucun artiste</p>';
+        }
+
+        window.creerArtiste = async function () {
+            const name = document.getElementById('add-artist-name').value;
+            if (!name) return showToast("Nom requis");
+            try {
+                const res = await api.post(`/api/users/${state.currentUser.uid}/artists`, { name, genre: '' });
+                state.artists.push(res);
+                closeModal('modal-add-artist');
+                showToast("Artiste créé");
+                initArtistes();
+            } catch (e) { showToast(e.message); }
+        };
+
+        function initProfil(id) {
+            window.currentArtistId = id || state.artists[0]?.id;
+            const artist = state.artists.find(a => a.id == window.currentArtistId);
+            if (!artist) return navigate('artistes');
+            document.getElementById('profil-name').innerText = artist.name;
+            document.getElementById('profil-genre').innerText = artist.genre || 'Non défini';
+            document.getElementById('profil-avatar').src = api.fileUrl(artist.photo || artist.logoUrl) || '/assets/img/icons/pdp.png';
+            document.getElementById('profil-banner').src = api.fileUrl(artist.bannerUrl) || '/assets/img/icons/ban.png';
+            document.getElementById('profil-metadata').innerHTML = `
+                <div><strong style="color:var(--text-label); font-size:12px;">Genre</strong><br>${artist.genre || '-'}</div>
+                <div><strong style="color:var(--text-label); font-size:12px;">ID</strong><br>${artist.id}</div>
+            `;
+        }
+
+        function initArtisteEdit(id) {
+            window.currentArtistId = id || window.currentArtistId;
+            const artist = state.artists.find(a => a.id == window.currentArtistId);
+            if (!artist) return navigate('artistes');
+            document.getElementById('art-bio').value = artist.biographie || '';
+            document.getElementById('art-spotify').value = artist.spotifyId || '';
+            document.getElementById('art-apple').value = artist.appleMusicId || '';
+        }
+
+        window.sauvegarderArtisteEditeur = async function () {
+            const biographie = document.getElementById('art-bio').value;
+            const spotifyId = document.getElementById('art-spotify').value;
+            const appleMusicId = document.getElementById('art-apple').value;
+            try {
+                await api.patch(`/api/users/${state.currentUser.uid}/artists/${window.currentArtistId}`, { biographie, spotifyId, appleMusicId });
+                showToast("Modifications enregistrées");
+                navigate('profil', { id: window.currentArtistId });
+            } catch (e) { showToast(e.message); }
+        };
+
+        function initSorties() {
+            document.getElementById('releases-list').innerHTML = state.releases.map(r => `
+                <div class="card item-card" style="cursor:pointer; margin:0;" onclick="navigate('sortie', {id:'${r.id}'})">
+                    <img src="${api.fileUrl(r.coverUrl || r.cover || r.cover_url) || '/assets/img/icons/brouillon.png'}">
+                    <h4>${r.title}</h4>
+                    <p style="font-size:12px; color:var(--text-muted);">${r.artistName}</p>
+                    <span class="badge ${r.status === 'livrée' ? 'badge-success' : 'badge-warning'}">${r.status}</span>
+                </div>`).join('') || '<p>Aucune sortie</p>';
+        }
+
+        function initSortieDetail(id) {
+            window.currentReleaseId = id;
+            const release = state.releases.find(r => r.id == id);
+            if (!release) return navigate('sorties');
+            document.getElementById('det-title').innerText = release.title;
+            document.getElementById('det-artist').innerText = release.artistName + ' • ' + release.type;
+            document.getElementById('det-status').innerText = release.status;
+            document.getElementById('det-cover').src = api.fileUrl(release.coverUrl || release.cover || release.cover_url) || '/assets/img/icons/brouillon.png';
+            document.getElementById('det-upc').innerText = release.upc || "N/A";
+            document.getElementById('det-date').innerText = release.releaseDate || 'Non définie';
+
+            const tracks = Array.isArray(release.tracks) ? release.tracks : [];
+            document.getElementById('det-tracklist').innerHTML = tracks.map((t, i) => `
+                <div style="padding: 10px; border-bottom: 1px solid var(--border-glass);">
+                    <strong>${i + 1}.</strong> ${t.title}
+                </div>
+            `).join('') || '<p>Aucune piste</p>';
+        }
+    </script>
+</body>
+
+</html>
