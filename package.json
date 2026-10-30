@@ -29,8 +29,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "VOTRE_PSEUDO_GITHUB",
-      "repo": "NOM_DU_REPO_GITHUB"
+      "owner": "morgannmusic-platform",
+      "repo": "morgannmusiccp-windowsapp"
     }
   },
   "dependencies": {
